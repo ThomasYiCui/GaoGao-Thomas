@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>New webpage</title>
+        <style>
+            body {
+                position: fixed;
+            }
+            #canvi {
+                margin-left: -10px;
+                margin-top: -10px;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="canvi"></canvas>
+        <script>
+            var canvas = document.getElementById("canvi");
+            var ctx = canvas.getContext("2d");
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            var mouseX = 0;
+            var mouseY = 0;
+            var clicked = false;
+            var keys = [];
+            canvas.addEventListener("mousemove", function(e) { 
+                var cRect = canvas.getBoundingClientRect();
+                mouseX = Math.round(e.clientX - cRect.left);
+                mouseY = Math.round(e.clientY - cRect.top);
+            });
+            canvas.addEventListener("mousedown", function(e) {
+                dragged = true;
+            }, false);
+            canvas.addEventListener("mouseup", function(e) {
+                if(dragged === true) {
+                    clicked = true;
+                    dragged = false;
+                }
+            });
+            window.addEventListener("keydown", keysPressed, false);
+            window.addEventListener("keyup", keysReleased, false);
+            function keysPressed(e) {
+                // store an entry for every key pressed
+                keys[e.keyCode] = true;
+             
+                e.preventDefault();
+            };
+            function keysReleased(e) {
+                // mark keys that were released
+                keys[e.keyCode] = false;
+            };
+            function start() {
+                var begin = setInterval(draw, 5);
+            };
+            function random(min, max) {
+                return min + Math.random(0, 1) * (max - min);
+            };
+        </script>
+        
+        
+        
+        
+        
+        <script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// other
+ctx.textAlign = "center"
+var scene = "jk";
+// soldier vars
+var soldiers = [];
+var squads = [[canvas.width/2, canvas.height/2]];
+// control button vars
+var control = 0;
+var controlButtonY = 0;
+var controlButtonMove = false;
+// soldier functions
+function soldier(x, y, s, i, t) {
+    this.x = x;
+    this.y = y;
+    this.aX = 0;
+    this.aY = 0;
+    this.s = s;
+    this.i = i;
+    this.tx = x;
+    this.ty = y;
+    this.t = t;
+};
+soldier.prototype.draw = function() {
+    switch(this.t) {
+        case "footmen":
+            if(this.s === control) {
+                ctx.strokeStyle = "rgba(250, 214, 8, 0.5)";
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.ellipse(this.x + 5, this.y + 22.5, 10, 10, 0, 0, 2 * Math.PI);
+                ctx.stroke();
+            }
+            ctx.fillStyle = "rgb(250, 154, 110)";
+            ctx.beginPath();
+            ctx.ellipse(this.x + 5, this.y, 5, 5, 0, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.fillStyle = "rgb(0, 0, " + (155 + (this.y)/(canvas.height/100)) + ")";
+            ctx.fillRect(this.x, this.y + 7, 10, 20);
+            ctx.fillStyle = "rgb(120, 120, 120)";
+            ctx.fillRect(this.x - 4 + (this.aX * 15), this.y + 2.5, 2.5, 15);
+            ctx.fillStyle = "rgb(125, 75, 0)";
+            ctx.fillRect(this.x - 4 + (this.aX * 15), this.y + 17.5, 2.5, 5);
+        break;
+        case "shieldmen":
+            if(this.s === control) {
+                ctx.strokeStyle = "rgba(250, 214, 8, 0.5)";
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.ellipse(this.x + 5, this.y + 22.5, 10, 10, 0, 0, 2 * Math.PI);
+                ctx.stroke();
+            }
+            ctx.fillStyle = "rgb(250, 154, 110)";
+            ctx.beginPath();
+            ctx.ellipse(this.x + 5, this.y, 5, 5, 0, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.fillStyle = "rgb(0, 0, " + (155 + (this.y)/(canvas.height/100)) + ")";
+            ctx.fillRect(this.x, this.y + 7, 10, 20);
+            ctx.fillStyle = "rgb(100, 100, 100)";
+            ctx.beginPath();
+            ctx.ellipse(this.x + 7.5 + (this.aX * 15), this.y + 15, 7.5, 7.5, 0, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.fillStyle = "rgb(120, 120, 120)";
+            ctx.fillRect(this.x - 4 + (this.aX * 15), this.y + 2.5, 2.5, 15);
+            ctx.fillStyle = "rgb(125, 75, 0)";
+            ctx.fillRect(this.x - 4 + (this.aX * 15), this.y + 17.5, 2.5, 5);
+        break;
+    }
+};
+soldier.prototype.update = function() {
+    if(Math.round(this.y) > this.ty) {
+        this.aY-=0.01;
+    } else if(Math.round(this.y) < this.ty) {
+        this.aY+=0.01;
+    }
+    if(Math.round(this.x) > this.tx) {
+        this.aX-=0.01;
+    } else if(Math.round(this.x) < this.tx) {
+         this.aX+=0.01;
+    }
+    this.x+=this.aX;
+    this.y+=this.aY;
+    this.aX*=0.97
+    this.aY*=0.97;
+    this.tx = -24 + squads[this.s][0] + this.i % 4 * 12;
+    this.ty = -24 + squads[this.s][1] + Math.floor(this.i/4) * 12;
+};
+soldier.prototype.collide = function(t) {
+    if(this.x + 5 > t.x && this.x < t.x + 5 && this.y + 10 > t.y && this.y < t.y + 10) {
+        this.x+=(this.x - t.x)/20;
+        t.x-=(this.x - t.x)/20;
+        this.y+=(this.x - t.y)/160;
+        t.y-=(this.x - t.y)/160;
+    }
+};
+for(var i = 0; i < 16; i+=1) {
+    soldiers.push(new soldier(canvas.width/2 + i % 4 * 12 + random(-1, 1), canvas.height/2 + Math.floor(i / 4) * 12 + random(-1, 1), 0, i, "footmen"));
+}
+function button(x, y, w, h, d, t) {
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = "rgb(0, 0, 0)";
+    ctx.font = t[0] + "px Arial";
+    ctx.fillText(t[1], x + w/2, -5 + y + h/2 + t[0]/2);
+    if(mouseX > x && mouseY > y && mouseX < w + w && mouseY < y + h && clicked) {
+        d();
+        clicked = false;
+    }
+};
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    switch(scene) {
+        case "jk":
+            // control flag {
+            ctx.fillStyle = "rgb(0, 200, 0)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "rgb(0, 0, 255)";
+            ctx.fillRect(squads[control][0], squads[control][1], 10, 7.5);
+            ctx.fillStyle = "rgb(125, 75, 0)";
+            ctx.fillRect(squads[control][0], squads[control][1], 2, 15)
+            // }
+            // soldiers/control movement {
+            // update/draw the soldiers
+            for(var i = 0; i < soldiers.length; i+=1) {
+                soldiers[i].draw();
+                soldiers[i].update();
+                for(var j = 0; j < soldiers.length; j+=1) {
+                    if(i !== j) {
+                         soldiers[i].collide(soldiers[j])
+                    }
+                }
+            }
+            // sort the soldiers
+            soldiers.sort(function(a, b){return a.y - b.y});
+            // control buttons
+            var controlButtonDo = 0;
+            if(controlButtonMove) {
+                controlButtonDo = "Up"
+            } else {
+                controlButtonDo = "Down"
+            }
+            ctx.fillStyle = "rgb(100, 100, 100)";
+            button(0, canvas.height - 105 + controlButtonY, canvas.width, 30, function() {
+                controlButtonMove = !controlButtonMove;
+            }, [19, controlButtonDo]);
+            if(controlButtonMove === false && controlButtonY > 0) {
+                controlButtonY-=5;
+            } else if(controlButtonMove === true && controlButtonY< 75) {
+                controlButtonY+=5;
+            }
+            ctx.fillStyle = "rgb(100, 100, 100, 0.25)";
+            ctx.fillRect(0, canvas.height - 75 + controlButtonY, canvas.width, 80)
+            for(var i = 0; i < squads.length; i+=1) {
+                ctx.fillStyle = "rgb(100, 100, 100, 0.25)";
+                ctx.fillRect(20 + i * ((canvas.width - 40)/5), canvas.height - 75 + controlButtonY, ((canvas.width - 40)/6), 75)
+                if(mouseX > 20 + i * ((canvas.width - 40)/5) && mouseX < 20 + i * ((canvas.width - 40)/5) + ((canvas.width - 40)/6) && mouseY > canvas.height - 75 + controlButtonY && clicked) {
+                    control = i;
+                    clicked = false;
+                }
+            }
+            // buy buttons {
+            ctx.fillStyle = "rgba(100, 100, 100, 0.7)"
+            button(0, 0, 150, 50, function() {
+                if(squads.length < 5) {
+                    squads.push([canvas.width/2, canvas.height/2])
+                        for(var i = 0; i < 16; i+=1) {
+                                soldiers.push(new soldier(canvas.width/2 + i % 4 * 12 + random(-1, 1), canvas.height/2 + Math.floor(i / 4) * 12 + random(-1, 1), squads.length - 1, i, "footmen"));
+                            }
+                        }
+            }, [25, "Footmen"]);
+            ctx.fillStyle = "rgba(100, 100, 100, 0.7)"
+            button(0, 51, 150, 50, function() {
+                if(squads.length < 5) {
+                    squads.push([canvas.width/2, canvas.height/2])
+                        for(var i = 0; i < 16; i+=1) {
+                                soldiers.push(new soldier(canvas.width/2 + i % 4 * 12 + random(-1, 1), canvas.height/2 + Math.floor(i / 4) * 12 + random(-1, 1), squads.length - 1, i, "shieldmen"));
+                            }
+                        }
+            }, [25, "Shieldmen"]);
+            // }
+            if(clicked) {
+                squads[control][0] = mouseX;
+                squads[control][1] = mouseY;
+            }
+            // }
+        break;
+    }
+    clicked = false;
+};
+start();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        </script>
+    </body>
+</html>
