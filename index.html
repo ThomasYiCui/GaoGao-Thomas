@@ -56,6 +56,11 @@
             function random(min, max) {
                 return min + Math.random(0, 1) * (max - min);
             };
+            function dist(dx, dy, dx1, dy1) {
+                dx = dx - dx1;
+                dy = dy - dy1;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
         </script>
         
         
@@ -82,11 +87,31 @@ ctx.textAlign = "center"
 var scene = "jk";
 // soldier vars
 var soldiers = [];
-var squads = [[canvas.width/2, canvas.height/2]];
+var squads = [[canvas.width/2, canvas.height/2, 1, "footmen"]];
+var pushBackSquad = [0, false];
 // control button vars
 var control = 0;
 var controlButtonY = 0;
 var controlButtonMove = false;
+var gold = 700;
+var stats = {
+    "footmen": {
+        hp: 100,
+        dmg: 10,
+        armr: 2,
+        dps: 15,
+        cost: 100,
+        spd: 0.01,
+    },
+    "shieldmen": {
+        hp: 150,
+        dmg: 7,
+        armr: 5,
+        dps: 15,
+        cost: 175,
+        spd: 0.01,
+    },
+};
 // soldier functions
 function soldier(x, y, s, i, t) {
     this.x = x;
@@ -98,6 +123,12 @@ function soldier(x, y, s, i, t) {
     this.tx = x;
     this.ty = y;
     this.t = t;
+    this.hp = stats[this.t].hp;
+    this.dmg = stats[this.t].dmg;
+    this.armr = stats[this.t].armr;
+    this.dps = stats[this.t].dps;
+    this.spd = stats[this.t].spd;
+    this.r = this.dps;
 };
 soldier.prototype.draw = function() {
     switch(this.t) {
@@ -116,9 +147,9 @@ soldier.prototype.draw = function() {
             ctx.fillStyle = "rgb(0, 0, " + (155 + (this.y)/(canvas.height/100)) + ")";
             ctx.fillRect(this.x, this.y + 7, 10, 20);
             ctx.fillStyle = "rgb(120, 120, 120)";
-            ctx.fillRect(this.x - 4 + (this.aX * 15), this.y + 2.5, 2.5, 15);
+            ctx.fillRect(this.x - 4 + ((this.aX + 0.2) * 40), this.y + 2.5, 2.5, 15);
             ctx.fillStyle = "rgb(125, 75, 0)";
-            ctx.fillRect(this.x - 4 + (this.aX * 15), this.y + 17.5, 2.5, 5);
+            ctx.fillRect(this.x - 4 + ((this.aX + 0.2) * 40), this.y + 17.5, 2.5, 5);
         break;
         case "shieldmen":
             if(this.s === control) {
@@ -147,32 +178,142 @@ soldier.prototype.draw = function() {
 };
 soldier.prototype.update = function() {
     if(Math.round(this.y) > this.ty) {
-        this.aY-=0.01;
+        this.aY-=this.spd;
     } else if(Math.round(this.y) < this.ty) {
-        this.aY+=0.01;
+        this.aY+=this.spd;
     }
     if(Math.round(this.x) > this.tx) {
-        this.aX-=0.01;
+        this.aX-=this.spd;
     } else if(Math.round(this.x) < this.tx) {
-         this.aX+=0.01;
+         this.aX+=this.spd;
     }
     this.x+=this.aX;
     this.y+=this.aY;
     this.aX*=0.97
     this.aY*=0.97;
+    if(pushBackSquad[1] && this.s > pushBackSquad[0]) {
+        this.s-=1;
+    }
     this.tx = -24 + squads[this.s][0] + this.i % 4 * 12;
     this.ty = -24 + squads[this.s][1] + Math.floor(this.i/4) * 12;
+    this.r-=1;
 };
 soldier.prototype.collide = function(t) {
-    if(this.x + 5 > t.x && this.x < t.x + 5 && this.y + 10 > t.y && this.y < t.y + 10) {
+    if(this.x + 10 > t.x && this.x < t.x + 10 && this.y + 10 > t.y && this.y < t.y + 10) {
         this.x+=(this.x - t.x)/20;
         t.x-=(this.x - t.x)/20;
-        this.y+=(this.x - t.y)/160;
-        t.y-=(this.x - t.y)/160;
+        this.y+=(this.x - t.y)/320;
+        t.y-=(this.x - t.y)/320;
     }
 };
+// enemy functions
+function enemy(x, y, t) {
+    this.x = x;
+    this.y = y;
+    this.aX = 0;
+    this.aY = 0;
+    this.tx = 0;
+    this.ty = 300;
+    this.t = t;
+    this.hp = 100;
+    this.closest = 100000;
+    this.hp = stats[this.t].hp;
+    this.dmg = stats[this.t].dmg;
+    this.armr = stats[this.t].armr;
+    this.dps = stats[this.t].dps;
+    this.spd = stats[this.t].spd;
+    this.r = this.dps;
+};
+enemy.prototype.draw = function() {
+    switch(this.t) {
+        case "footmen":
+            if(this.s === control) {
+                ctx.strokeStyle = "rgba(250, 214, 8, 0.5)";
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.ellipse(this.x + 5, this.y + 22.5, 10, 10, 0, 0, 2 * Math.PI);
+                ctx.stroke();
+            }
+            ctx.fillStyle = "rgb(250, 154, 110)";
+            ctx.beginPath();
+            ctx.ellipse(this.x + 5, this.y, 5, 5, 0, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.fillStyle = "rgb(255, 0, 0)";
+            ctx.fillRect(this.x, this.y + 7, 10, 20);
+            ctx.fillStyle = "rgb(120, 120, 120)";
+            ctx.fillRect(this.x - 4 + ((this.aX + 0.2) * 40), this.y + 2.5, 2.5, 15);
+            ctx.fillStyle = "rgb(125, 75, 0)";
+            ctx.fillRect(this.x - 4 + ((this.aX + 0.2) * 40), this.y + 17.5, 2.5, 5);
+        break;
+        case "shieldmen":
+            if(this.s === control) {
+                ctx.strokeStyle = "rgba(250, 214, 8, 0.5)";
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.ellipse(this.x + 5, this.y + 22.5, 10, 10, 0, 0, 2 * Math.PI);
+                ctx.stroke();
+            }
+            ctx.fillStyle = "rgb(250, 154, 110)";
+            ctx.beginPath();
+            ctx.ellipse(this.x + 5, this.y, 5, 5, 0, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.fillStyle = "rgb(255, 0, 0)";
+            ctx.fillRect(this.x, this.y + 7, 10, 20);
+            ctx.fillStyle = "rgb(100, 100, 100)";
+            ctx.beginPath();
+            ctx.ellipse(this.x + 7.5 + (this.aX * 15), this.y + 15, 7.5, 7.5, 0, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.fillStyle = "rgb(120, 120, 120)";
+            ctx.fillRect(this.x - 4 + (this.aX * 15), this.y + 2.5, 2.5, 15);
+            ctx.fillStyle = "rgb(125, 75, 0)";
+            ctx.fillRect(this.x - 4 + (this.aX * 15), this.y + 17.5, 2.5, 5);
+        break;
+    }
+};
+enemy.prototype.update = function() {
+    if(Math.round(this.y) > this.ty) {
+        this.aY-=this.spd;
+    } else if(Math.round(this.y) < this.ty) {
+        this.aY+=this.spd;
+    }
+    if(Math.round(this.x) > this.tx) {
+        this.aX-=this.spd;
+    } else if(Math.round(this.x) < this.tx) {
+         this.aX+=this.spd;
+    }
+    this.x+=this.aX;
+    this.y+=this.aY;
+    this.aX*=0.97
+    this.aY*=0.97;
+    this.closest = 10000000000000000;
+    this.r-=1;
+};
+enemy.prototype.collide = function(t) {
+    if(dist(this.x, this.y, t.x, t.y) < this.closest && t.closest === undefined) {
+        this.closest = dist(this.x, this.y, t.x, t.y);
+        this.tx = t.x;
+        this.ty = t.y;
+    }
+    if(this.x + 10 > t.x && this.x < t.x + 10 && this.y + 10 > t.y && this.y < t.y + 10) {
+        this.x+=(this.x - t.x)/20;
+        t.x-=(this.x - t.x)/20;
+        this.y+=(this.x - t.y)/320;
+        t.y-=(this.x - t.y)/320;
+        if(this.closest !== undefined && t.closest === undefined) {
+            if(t.r <= 0) {
+                this.hp-=t.dmg - this.armr;
+                t.r = t.dps;
+            }
+            if(this.r <= 0) {
+                t.hp-=this.dmg - t.armr;
+                this.r = this.dps;
+            }
+        }
+    }
+};
+// spawns a squad of soldiers
 for(var i = 0; i < 16; i+=1) {
-    soldiers.push(new soldier(canvas.width/2 + i % 4 * 12 + random(-1, 1), canvas.height/2 + Math.floor(i / 4) * 12 + random(-1, 1), 0, i, "footmen"));
+    soldiers.push([new soldier(canvas.width/2 + i % 4 * 12 + random(-1, 1), canvas.height/2 + Math.floor(i / 4) * 12 + random(-1, 1), 0, i, "footmen"), "ally"]);
 }
 function button(x, y, w, h, d, t) {
     ctx.fillRect(x, y, w, h);
@@ -184,32 +325,39 @@ function button(x, y, w, h, d, t) {
         clicked = false;
     }
 };
+for(var i = 0; i < 30; i+=1) {
+    soldiers.push([new enemy(0 + (canvas.width/30) * i, 10, "footmen"), "enemy"]);
+}
+for(var i = 0; i < 30; i+=1) {
+    soldiers.push([new enemy(0 + (canvas.width/30) * i, 0, "shieldmen"), "enemy"]);
+}
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     switch(scene) {
         case "jk":
-            // control flag {
             ctx.fillStyle = "rgb(0, 200, 0)";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "rgb(0, 0, 255)";
-            ctx.fillRect(squads[control][0], squads[control][1], 10, 7.5);
-            ctx.fillStyle = "rgb(125, 75, 0)";
-            ctx.fillRect(squads[control][0], squads[control][1], 2, 15)
-            // }
-            // soldiers/control movement {
+            // soldiers/enemys/control movement {
             // update/draw the soldiers
             for(var i = 0; i < soldiers.length; i+=1) {
-                soldiers[i].draw();
-                soldiers[i].update();
+                soldiers[i][0].draw();
+                soldiers[i][0].update();
+                if(soldiers[i][1] === "ally") {
+                    squads[soldiers[i][0].s][2]+=1;
+                }
                 for(var j = 0; j < soldiers.length; j+=1) {
                     if(i !== j) {
-                         soldiers[i].collide(soldiers[j])
+                        soldiers[i][0].collide(soldiers[j][0])
                     }
                 }
+                if(soldiers[i][0].hp <= 0) {
+                    soldiers.splice(i, 1)
+                }
             }
-            // sort the soldiers
-            soldiers.sort(function(a, b){return a.y - b.y});
-            // control buttons
+            // sort the soldiers/enemys
+            soldiers.sort(function(a, b){return a[0].y - b[0].y});
+            // gui {
+            // control buttons {
             var controlButtonDo = 0;
             if(controlButtonMove) {
                 controlButtonDo = "Up"
@@ -229,37 +377,63 @@ function draw() {
             ctx.fillRect(0, canvas.height - 75 + controlButtonY, canvas.width, 80)
             for(var i = 0; i < squads.length; i+=1) {
                 ctx.fillStyle = "rgb(100, 100, 100, 0.25)";
-                ctx.fillRect(20 + i * ((canvas.width - 40)/5), canvas.height - 75 + controlButtonY, ((canvas.width - 40)/6), 75)
+                ctx.fillRect(20 + i * ((canvas.width - 40)/5), canvas.height - 75 + controlButtonY, ((canvas.width - 40)/6), 75);
+                ctx.fillStyle = "rgb(2000, 0, 0)";
+                ctx.fillRect(25 + i * ((canvas.width - 40)/5), canvas.height - 15 + controlButtonY, (((canvas.width - 40)/6) - 10), 5)
+                ctx.fillStyle = "rgb(0, 200, 0)";
+                ctx.fillRect(25 + i * ((canvas.width - 40)/5), canvas.height - 15 + controlButtonY, ((((canvas.width - 40)/6) - 10)/16) * squads[i][2], 5)
                 if(mouseX > 20 + i * ((canvas.width - 40)/5) && mouseX < 20 + i * ((canvas.width - 40)/5) + ((canvas.width - 40)/6) && mouseY > canvas.height - 75 + controlButtonY && clicked) {
                     control = i;
                     clicked = false;
                 }
+                if(squads[i][2] <= 0) {
+                    pushBackSquad = [i, true];
+                    squads.splice(i, 1);
+                } else {
+                    squads[i][2] = 0;
+                }
             }
+            // }
             // buy buttons {
             ctx.fillStyle = "rgba(100, 100, 100, 0.7)"
             button(0, 0, 150, 50, function() {
-                if(squads.length < 5) {
-                    squads.push([canvas.width/2, canvas.height/2])
-                        for(var i = 0; i < 16; i+=1) {
-                                soldiers.push(new soldier(canvas.width/2 + i % 4 * 12 + random(-1, 1), canvas.height/2 + Math.floor(i / 4) * 12 + random(-1, 1), squads.length - 1, i, "footmen"));
-                            }
-                        }
+                if(squads.length < 5 && gold > stats[""]) {
+                    squads.push([canvas.width/2, canvas.height/2, 1])
+                    for(var i = 0; i < 16; i+=1) {
+                        soldiers.push([new soldier(canvas.width/2 + i % 4 * 12 + random(-1, 1), canvas.height/2 + Math.floor(i / 4) * 12 + random(-1, 1), squads.length - 1, i, "footmen"), "ally"]);
+                    }
+                    gold -= stats["footmen"].cost;
+                }
             }, [25, "Footmen"]);
             ctx.fillStyle = "rgba(100, 100, 100, 0.7)"
             button(0, 51, 150, 50, function() {
-                if(squads.length < 5) {
-                    squads.push([canvas.width/2, canvas.height/2])
-                        for(var i = 0; i < 16; i+=1) {
-                                soldiers.push(new soldier(canvas.width/2 + i % 4 * 12 + random(-1, 1), canvas.height/2 + Math.floor(i / 4) * 12 + random(-1, 1), squads.length - 1, i, "shieldmen"));
-                            }
-                        }
+                if(squads.length < 5 && gold > stats["shieldmen"].cost) {
+                    squads.push([canvas.width/2, canvas.height/2, 1])
+                    for(var i = 0; i < 16; i+=1) {
+                        soldiers.push([new soldier(canvas.width/2 + i % 4 * 12 + random(-1, 1), canvas.height/2 + Math.floor(i / 4) * 12 + random(-1, 1), squads.length - 1, i, "shieldmen"), "ally"]);
+                    }
+                    gold -= stats["shieldmen"].cost;   
+                }
             }, [25, "Shieldmen"]);
             // }
-            if(clicked) {
+            // gold/other {
+            ctx.fillStyle = "rgb(0, 0, 0)";
+            ctx.font = 20 + "px Arial";
+            ctx.fillText("gold: " + gold, canvas.width - 75, 20);
+            //}
+            // }
+            if(clicked && pushBackSquad[1] === false) {
                 squads[control][0] = mouseX;
                 squads[control][1] = mouseY;
             }
             // }
+            // control flag {
+            ctx.fillStyle = "rgb(0, 0, 255)";
+            ctx.fillRect(squads[control][0], squads[control][1], 10, 7.5);
+            ctx.fillStyle = "rgb(125, 75, 0)";
+            ctx.fillRect(squads[control][0], squads[control][1], 2, 15)
+            // }
+            pushBackSquad = [0, false];
         break;
     }
     clicked = false;
